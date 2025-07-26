@@ -1,7 +1,7 @@
 {
     "name": "@wharfkit/sealed-messages",
     "description": "",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "homepage": "https://github.com/wharfkit/sealed-messages",
     "license": "BSD-3-Clause",
     "main": "lib/sealed-messages.js",

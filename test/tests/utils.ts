@@ -4,12 +4,12 @@ import {sealMessage, unsealMessage} from '../../src/index'
 
 suite('utils', function () {
     test('sealMessage', async function () {
-        const privateKey = PrivateKey.generate('K1')
-        const publicKey = privateKey.toPublic()
+        const from = PrivateKey.generate('K1')
+        const to = PrivateKey.generate('K1').toPublic()
         const nonce = UInt64.from(1234567890)
         const message = 'Hello, World!'
 
-        const sealedMessage = await sealMessage(message, privateKey, publicKey, nonce)
+        const sealedMessage = await sealMessage(message, from, to, nonce)
         assert.notEqual(sealedMessage.toString('hex'), message)
         assert.isTrue(sealedMessage.length > 0)
         assert.match(sealedMessage.toString('hex'), /^[0-9a-f]+$/)
@@ -17,13 +17,13 @@ suite('utils', function () {
     })
 
     test('unsealMessage', async function () {
-        const privateKey = PrivateKey.generate('K1')
-        const publicKey = privateKey.toPublic()
+        const from = PrivateKey.generate('K1')
+        const to = PrivateKey.generate('K1')
         const nonce = UInt64.from(1234567890)
         const message = 'Hello, World!'
 
-        const sealedMessage = await sealMessage(message, privateKey, publicKey, nonce)
-        const unsealedMessage = await unsealMessage(sealedMessage, privateKey, publicKey, nonce)
+        const sealedMessage = await sealMessage(message, from, to.toPublic(), nonce)
+        const unsealedMessage = await unsealMessage(sealedMessage, to, from.toPublic(), nonce)
         assert.equal(unsealedMessage, message)
     })
 })

@@ -9,6 +9,7 @@ import {
     UInt32,
     UInt64,
 } from '@wharfkit/antelope'
+import {AES_CBC} from '@greymass/miniaes'
 
 @Struct.type('sealed_message')
 export class SealedMessage extends Struct {
@@ -18,33 +19,29 @@ export class SealedMessage extends Struct {
     @Struct.field('uint32') checksum!: UInt32
 }
 
-export async function createSymmetricKey(secret: Checksum512, nonce: UInt64): Promise<CryptoKey> {
+export function createSymmetricKey(secret: Checksum512, nonce: UInt64): Uint8Array {
     const key = Checksum512.hash(Serializer.encode({object: nonce}).appending(secret.array))
-    return await crypto.subtle.importKey('raw', key.array.slice(0, 32), {name: 'AES-CBC'}, false, [
-        'encrypt',
-        'decrypt',
-    ])
+    return key.array.slice(0, 32)
 }
 
-export function createIV(nonce: UInt64, secret: Checksum512) {
+export function createIV(nonce: UInt64, secret: Checksum512): Checksum512 {
     return Checksum512.hash(Serializer.encode({object: nonce}).appending(secret.array))
 }
 
-export async function encryptMessage(iv, symmetricKey, message) {
-    return Bytes.from(
-        await crypto.subtle.encrypt(
-            {name: 'AES-CBC', iv: iv.array.slice(32, 48)},
-            symmetricKey,
-            Bytes.from(message, 'utf8').array
-        )
-    )
+export function encryptMessage(iv: Checksum512, symmetricKey: Uint8Array, message: string): Bytes {
+    const plaintext = Bytes.from(message, 'utf8').array
+    const ivBytes = iv.array.slice(32, 48)
+    const encrypted = AES_CBC.encrypt(plaintext, symmetricKey, true, ivBytes)
+    return Bytes.from(encrypted)
 }
-export async function decryptMessage(iv, symmetricKey, message) {
-    return await crypto.subtle.decrypt(
-        {name: 'AES-CBC', iv: iv.array.slice(32, 48)},
-        symmetricKey,
-        message.array
-    )
+
+export function decryptMessage(
+    iv: Checksum512,
+    symmetricKey: Uint8Array,
+    message: Bytes
+): Uint8Array {
+    const ivBytes = iv.array.slice(32, 48)
+    return AES_CBC.decrypt(message.array, symmetricKey, true, ivBytes)
 }
 
 /**
@@ -55,31 +52,31 @@ export async function decryptMessage(iv, symmetricKey, message) {
  * @param nonce - A nonce to use for encryption
  * @returns The sealed message as Bytes
  */
-export async function sealMessage(
+export function sealMessage(
     message: string,
     privateKey: PrivateKey,
     publicKey: PublicKey,
     nonce: UInt64
-): Promise<Bytes> {
+): Bytes {
     const secret = privateKey.sharedSecret(publicKey)
     const iv = createIV(nonce, secret)
-    const symmetricKey = await createSymmetricKey(secret, nonce)
+    const symmetricKey = createSymmetricKey(secret, nonce)
     return encryptMessage(iv, symmetricKey, message)
 }
 
-export async function sealedMessagePayload(
+export function sealedMessagePayload(
     message: string,
     privateKey: PrivateKey,
     publicKey: PublicKey,
     nonce?: UInt64
-): Promise<SealedMessage> {
+): SealedMessage {
     if (!nonce) {
         nonce = UInt64.random()
     }
     const secret = privateKey.sharedSecret(publicKey)
     const iv = createIV(nonce, secret)
-    const symmetricKey = await createSymmetricKey(secret, nonce)
-    const ciphertext = await encryptMessage(iv, symmetricKey, message)
+    const symmetricKey = createSymmetricKey(secret, nonce)
+    const ciphertext = encryptMessage(iv, symmetricKey, message)
     const checksumView = new DataView(Checksum256.hash(iv.array).array.buffer)
     const checksum = checksumView.getUint32(0, true)
     return new SealedMessage({
@@ -99,15 +96,15 @@ export async function sealedMessagePayload(
  * @returns The decrypted message as a UTF-8 string
  * @internal
  */
-export async function unsealMessage(
+export function unsealMessage(
     message: Bytes,
     privateKey: PrivateKey,
     publicKey: PublicKey,
     nonce: UInt64
-): Promise<string> {
+): string {
     const secret = privateKey.sharedSecret(publicKey)
     const iv = createIV(nonce, secret)
-    const symmetricKey = await createSymmetricKey(secret, nonce)
-    const decryptedMessage = await decryptMessage(iv, symmetricKey, message)
+    const symmetricKey = createSymmetricKey(secret, nonce)
+    const decryptedMessage = decryptMessage(iv, symmetricKey, message)
     return Bytes.from(decryptedMessage).toString('utf8')
 }

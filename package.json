@@ -16,6 +16,7 @@
         "prepare": "make"
     },
     "dependencies": {
+        "@greymass/miniaes": "^1.0.0",
         "@wharfkit/antelope": "^1.1.0"
     },
     "resolutions": {},

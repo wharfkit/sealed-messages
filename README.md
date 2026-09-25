@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This package lives in the WharfKit monorepo at [wharfkit/js/packages/sealed-messages](https://github.com/wharfkit/js/tree/dev/packages/sealed-messages), and this repository is archived. Open new issues and pull requests on [wharfkit/js](https://github.com/wharfkit/js).
+
 # Sealed Messages
 
 Use [Shamir's secret sharing](https://en.wikipedia.org/wiki/Shamir%27s_secret_sharing) with [@wharfkit/antelope](https://github.com/wharfkit/antelope) Public/Private Keys to encrypt and decrypt a message.
